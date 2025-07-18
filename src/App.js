@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Home from "./pages/Home";
 import TicTacToe from "./pages/TicTacToe";
@@ -31,6 +31,7 @@ export default function App() {
         <Route path="/about" element={<About />} /> 
         <Route path="/personal-webpage/chessdemo" element={<ChessDemo />} />
         <Route path="/contact" element={<Contact />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
         {/* Add more routes here as needed */}
       </Routes>
     </>
