@@ -4,7 +4,7 @@ const localProjects = [
   {
     name: "Chess Game",
     description: "A React chess game powered by Stockfish AI, featuring sound effects, hint arrows, evaluation bar, and local play.",
-    demo: "/personal-webpage/chessdemo",  // or whatever your route is
+    demo: "/chessdemo",  // or whatever your route is
     image: "https://upload.wikimedia.org/wikipedia/commons/4/42/Chess_klt45.svg", // <-- Use the exact filename!
     tech: ["React", "Stockfish", "Howler", "react-chessboard"],
     github: "https://github.com/manu4793/personal-webpage",

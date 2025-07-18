@@ -29,7 +29,7 @@ export default function App() {
         <Route path="/tools/calculator" element={<Calculator />} />
         <Route path="/resume" element={<Resume />} /> 
         <Route path="/about" element={<About />} /> 
-        <Route path="/personal-webpage/chessdemo" element={<ChessDemo />} />
+        <Route path="/chessdemo" element={<ChessDemo />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="*" element={<Navigate to="/" replace />} />
         {/* Add more routes here as needed */}
