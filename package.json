@@ -1,0 +1,58 @@
+{
+  "name": "frontend",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@emailjs/browser": "^4.4.1",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^13.5.0",
+    "axios": "^1.10.0",
+    "bootstrap": "^5.3.7",
+    "chess.js": "^1.4.0",
+    "emailjs-com": "^3.2.0",
+    "howler": "^2.2.4",
+    "mathjs": "^14.5.3",
+    "plotly.js": "^3.0.1",
+    "react": "^18.2.0",
+    "react-bootstrap": "^2.10.10",
+    "react-chessboard": "^4.7.3",
+    "react-dom": "^18.2.0",
+    "react-plotly.js": "^2.6.0",
+    "react-router-dom": "^7.6.3",
+    "react-scripts": "^5.0.1",
+    "web-vitals": "^2.1.4"
+  },
+  "scripts": {
+    "start": "cross-env BROWSER=none react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "gh-pages": "^6.3.0"
+  },
+  "homepage": "https://manu4793.github.io/"
+}

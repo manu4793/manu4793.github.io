@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Redirecting...</title>
+  <script>
+    // Redirect all 404 requests to index.html with the original path as a query param
+    (function() {
+      var pathname = window.location.pathname;
+      var repo = "/personal-webpage"; // Replace with your repo name
+      if (!pathname.startsWith(repo)) repo = "";
+      window.location.replace(repo + "/index.html?redirect=" + pathname);
+    })();
+  </script>
+</head>
+<body>
+  <p>Redirecting to the app...</p>
+</body>
+</html>

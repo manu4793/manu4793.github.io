@@ -1,0 +1,46 @@
+/* Navbar container styles */
+.navbar {
+  background: #232323;
+  color: #fff;
+  padding: 0.5rem 1.5rem;
+}
+
+.nav-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Logo styles */
+.nav-logo {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #fff;
+  text-decoration: none;
+  margin-right: 2rem; /* space between logo and links */
+}
+
+/* Nav menu styles */
+.nav-menu {
+  list-style: none;
+  display: flex;
+  margin: 0;
+  padding: 0;
+}
+
+/* Nav item styles */
+.nav-menu li {
+  margin-left: 2rem; /* space between each link */
+}
+
+/* Link styles */
+.nav-menu li a {
+  color: #fff;
+  text-decoration: none;
+  font-size: 1.1rem;
+  transition: color 0.2s;
+}
+
+.nav-menu li a:hover {
+  color: #ffb347;
+}
