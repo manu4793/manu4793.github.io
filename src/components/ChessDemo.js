@@ -4,6 +4,7 @@ import { Chessboard } from "react-chessboard";
 import { Chess } from "chess.js";
 import { Howl } from "howler";
 import "./ChessDemo.css";
+import { Helmet } from "react-helmet";
 
 const base = process.env.PUBLIC_URL;
 
@@ -559,6 +560,16 @@ export default function ChessDemo() {
   }, [fen]);
 
   return (
+    <>
+      <Helmet>
+        <title>Chess Demo</title>
+        <meta property="og:title" content="Chess Demo" />
+        <meta property="og:description" content="Play chess against Stockfish." />
+        <meta property="og:image" content="https://cdn-icons-png.flaticon.com/512/600/600489.png" /> {/* Chess board icon */}
+        {/* Or use your hosted asset: content={`${base}/assets/images/b_king.png`} */}
+        <meta property="og:url" content={window.location.href} />
+        <meta property="og:type" content="website" />
+      </Helmet>
     <div className="chess-container">
       <h2>Chess Game vs Stockfish</h2>
       <div className="controls">
@@ -680,5 +691,6 @@ export default function ChessDemo() {
       </div>
       <p className="status">{status}</p>
     </div>
+    </>
   );
 }

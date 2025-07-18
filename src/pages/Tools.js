@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet";
 
 const tools = [
   {
@@ -29,6 +30,15 @@ export default function Tools() {
   const navigate = useNavigate();
 
   return (
+    <>
+      <Helmet>
+        <title>Tools</title>
+        <meta property="og:title" content="Tools" />
+        <meta property="og:description" content="Collection of useful tools like calculators and converters." />
+        <meta property="og:image" content="https://cdn-icons-png.flaticon.com/512/126/126404.png" /> {/* Toolbox icon */}
+        <meta property="og:url" content={window.location.href} />
+        <meta property="og:type" content="website" />
+      </Helmet>
     <div className="container my-4">
       <h1 className="my-4">Tools</h1>
       <div className="row">
@@ -65,5 +75,6 @@ export default function Tools() {
         ))}
       </div>
     </div>
+    </>
   );
 }

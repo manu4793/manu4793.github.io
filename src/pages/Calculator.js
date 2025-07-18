@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Button, Tab, Tabs, Form, InputGroup, Tooltip, OverlayTrigger } from "react-bootstrap";
 import Plot from "react-plotly.js";
+import { Helmet } from "react-helmet";  // Add this import
 
 const BUTTONS = [
   "7", "8", "9", "/", "sin(", 
@@ -197,6 +198,15 @@ export default function Calculator() {
   const [key, setKey] = useState("advanced");
 
   return (
+    <>
+      <Helmet>
+        <title>Calculator</title>
+        <meta property="og:title" content="Calculator" />
+        <meta property="og:description" content="A simple calculator for basic math operations." />
+        <meta property="og:image" content="https://cdn-icons-png.flaticon.com/512/1006/1006551.png" />
+        <meta property="og:url" content={window.location.href} />
+        <meta property="og:type" content="website" />
+      </Helmet>
     <div className="p-3" style={{ maxWidth: 600, margin: "auto" }}>
       <Tabs activeKey={key} onSelect={(k) => setKey(k)} className="mb-3" fill>
         <Tab eventKey="advanced" title="Advanced Calculator">
@@ -207,5 +217,6 @@ export default function Calculator() {
         </Tab>
       </Tabs>
     </div>
+    </>
   );
 }

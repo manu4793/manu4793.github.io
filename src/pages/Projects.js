@@ -111,11 +111,7 @@ export default function Projects() {
                     {proj.demo && (
                       <a
                         className="btn btn-outline-primary btn-sm"
-                        href={
-                          proj.demo.startsWith("http")
-                            ? proj.demo
-                            : `${process.env.PUBLIC_URL}#${proj.demo}`
-                        }
+                        href={proj.demo}
                         target={proj.demo.startsWith("http") ? "_blank" : "_self"}
                         rel="noopener noreferrer"
                       >

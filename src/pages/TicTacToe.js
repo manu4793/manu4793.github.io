@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { Helmet } from "react-helmet";
 
 const initialBoard = Array(9).fill("");
 
@@ -73,6 +74,15 @@ export default function TicTacToe() {
 
   // --- UI ---
   return (
+    <>
+      <Helmet>
+        <title>Tic Tac Toe</title>
+        <meta property="og:title" content="Tic Tac Toe Game" />
+        <meta property="og:description" content="Play Tic Tac Toe and view game history." />
+        <meta property="og:image" content="https://cdn-icons-png.flaticon.com/512/2076/2076261.png" /> {/* Tic-tac-toe icon */}
+        <meta property="og:url" content={window.location.href} />
+        <meta property="og:type" content="website" />
+      </Helmet>
     <div className="container mt-4" style={{maxWidth: 480}}>
       <h2>Tic Tac Toe</h2>
       <div className="mb-2">Current: {winner ? (winner === "Tie" ? "Tie!" : `Winner: ${winner}`) : xIsNext ? "X" : "O"}</div>
@@ -103,5 +113,6 @@ export default function TicTacToe() {
         )}
       </ul>
     </div>
+    </>
   );
 }

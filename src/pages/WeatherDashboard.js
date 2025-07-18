@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
+import { Helmet } from "react-helmet";
 
 const API_KEY = "447a6a8616dcad62aa050770a4edcae1"; // <-- Put your API key here!
 
@@ -44,6 +45,15 @@ export default function WeatherDashboard() {
   }
 
   return (
+    <>
+      <Helmet>
+        <title>Weather Dashboard</title>
+        <meta property="og:title" content="Weather Dashboard" />
+        <meta property="og:description" content="Get current weather for any city." />
+        <meta property="og:image" content="https://cdn-icons-png.flaticon.com/512/116/116362.png" /> {/* Weather icon */}
+        <meta property="og:url" content={window.location.href} />
+        <meta property="og:type" content="website" />
+      </Helmet>
     <div className="container mt-4" style={{ maxWidth: 400 }}>
       <h2 className="mb-3">Weather Dashboard</h2>
       <form onSubmit={fetchWeather} className="mb-3">
@@ -92,5 +102,6 @@ export default function WeatherDashboard() {
         </div>
       )}
     </div>
+    </>
   );
 }

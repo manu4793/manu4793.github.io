@@ -19,6 +19,7 @@
     "react-bootstrap": "^2.10.10",
     "react-chessboard": "^4.7.3",
     "react-dom": "^18.2.0",
+    "react-helmet-async": "^2.0.5",
     "react-plotly.js": "^2.6.0",
     "react-router-dom": "^7.6.3",
     "react-scripts": "^5.0.1",
@@ -30,8 +31,29 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d build"
+    "deploy": "gh-pages -d build",
+    "postbuild": "react-snap"
   },
+
+  "reactSnap": {
+    "source": "build",
+    "include": [
+      "/", 
+      "/projects",
+      "/tictactoe",
+      "/weather",
+      "/run-box-ecm-demo",
+      "/github",
+      "/tools",
+      "/calculator",
+      "/resume",
+      "/about",
+      "/chessdemo",
+      "/contact"
+    ],
+    "puppeteerArgs": ["--no-sandbox"]
+  },
+  
   "eslintConfig": {
     "extends": [
       "react-app",
@@ -52,7 +74,9 @@
   },
   "devDependencies": {
     "cross-env": "^7.0.3",
-    "gh-pages": "^6.3.0"
+    "gh-pages": "^6.3.0",
+    "react-helmet": "^6.1.0",
+    "react-snap": "^1.23.0"
   },
   "homepage": "https://manu4793.github.io/"
 }
