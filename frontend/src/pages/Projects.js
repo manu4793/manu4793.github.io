@@ -10,6 +10,14 @@ const localProjects = [
     github: "https://github.com/manu4793/personal-webpage",
   },
   {
+    name: "Stock Price Predictor",
+    description: "LSTM-powered stock prediction app with FastAPI backend and React frontend.",
+    demo: "/stockpredictor",
+    github: "https://github.com/manu4793/manu4793.github.io/tree/main/backend",
+    tech: ["React", "FastAPI", "TensorFlow", "Chart.js"],
+    image: "https://upload.wikimedia.org/wikipedia/commons/0/0e/Noun_Project_graph_icon_1162545_cc.svg", // optional
+  },
+  {
     name: "Tic Tac Toe Game",
     description: "A React + Django powered Tic Tac Toe game with persistent state and leaderboard.",
     demo: "/tictactoe", // Internal route (opens in same tab)

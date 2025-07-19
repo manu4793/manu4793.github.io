@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 import uvicorn
+import pandas as pd  # Add this line
 from utils import fetch_historical_data, prepare_data_for_prediction, make_prediction
 
 app = FastAPI()

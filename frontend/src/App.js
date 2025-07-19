@@ -12,6 +12,7 @@ import Resume from './pages/Resume';
 import About from './pages/About'; 
 import ChessDemo from './components/ChessDemo';
 import Contact from './pages/Contact';
+import StockPredictor from "./pages/StockPredictor";
 
 export default function App() {
   return (
@@ -30,6 +31,7 @@ export default function App() {
         <Route path="/chessdemo" element={<ChessDemo />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="/stockpredictor" element={<StockPredictor />} />
         {/* Add more routes here as needed */}
       </Routes>
     </>
