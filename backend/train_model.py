@@ -43,4 +43,4 @@ history = model.fit(X_train, y_train, epochs=100, batch_size=32, validation_data
 test_loss = model.evaluate(X_test, y_test)
 print(f"Test Loss: {test_loss}")
 
-model.save('model.keras')
+model.save('model.keras', save_format='keras_v3')
