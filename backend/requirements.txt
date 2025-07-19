@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+tensorflow  # Assuming Keras/TensorFlow for LSTM; use torch if PyTorch
+yfinance
+numpy
+pandas
+scikit-learn  # For scaling if needed
