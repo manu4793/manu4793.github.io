@@ -68,3 +68,41 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/d
 ### `npm run build` fails to minify
 
 This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+
+
+=======================================================================================================================================================================================================================================
+
+
+# Getting Started with FastAPI Backend
+
+This project serves as the backend for the Stock Price Predictor using [FastAPI](https://fastapi.tiangolo.com/).
+
+## Available Commands
+
+In the project directory, you can run:
+
+### `uvicorn main:app --reload`
+
+Runs the API server in development mode.\
+Open [http://localhost:8000](http://localhost:8000) to access the API documentation via Swagger UI.\
+Open [http://localhost:8000/docs](http://localhost:8000/docs) for interactive API testing.
+
+The server will automatically reload when you make changes to the code.
+
+---
+
+## API Endpoints
+
+### `GET /`
+
+Health check endpoint. Returns a simple message confirming the API is running.
+
+### `POST /predict`
+
+Takes a stock ticker symbol and returns historical prices along with predicted prices.
+
+Example request:
+```json
+{
+  "ticker": "AAPL"
+}

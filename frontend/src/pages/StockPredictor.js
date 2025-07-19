@@ -1,8 +1,11 @@
 import React, { useState } from "react";
-import axios from "axios";  // Or use fetch if not installed
+import axios from "axios";
 import StockChart from "../components/StockChart.js";
 
-const BACKEND_URL = "https://manu4793-github-io.onrender.com";  // Replace with your actual Render URL
+const BACKEND_URL =
+  process.env.NODE_ENV === "production"
+    ? "https://manu4793-github-io.onrender.com"
+    : "http://localhost:8000";
 
 function StockPredictor() {
   const [ticker, setTicker] = useState("");
