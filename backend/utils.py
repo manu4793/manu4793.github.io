@@ -1,12 +1,17 @@
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'  # Force CPU-only
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'   # Suppress warnings
+
 import yfinance as yf
 import numpy as np
 import pandas as pd
 from tensorflow.keras.models import load_model
 from sklearn.preprocessing import MinMaxScaler
 
-MODEL_PATH = "model.keras"
+MODEL_PATH = "model.h5"  # Change to .h5
+
 TIME_STEPS = 60
-PREDICT_DAYS = 30  # Extended to 30 days
+PREDICT_DAYS = 30
 
 def fetch_historical_data(ticker, period="1y"):
     try:
