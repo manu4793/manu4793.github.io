@@ -68,7 +68,7 @@ def predict(request: PredictionRequest):
         "prices": historical_data['Close'].values.tolist()
     }
     # Predicted dates using business days
-    predicted_dates = pd.bdate_range(start=last_date + pd.Timedelta(days=1), periods=30).strftime("%Y-%m-%d").tolist()
+    predicted_dates = pd.bdate_range(start=last_date + pd.Timedelta(days=1), periods=90).strftime("%Y-%m-%d").tolist()
     predicted = {
         "dates": predicted_dates,
         "prices": predictions.tolist()

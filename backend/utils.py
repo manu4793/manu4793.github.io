@@ -1,5 +1,4 @@
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1'  # Force CPU-only
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'   # Suppress warnings
 
 import yfinance as yf
@@ -9,9 +8,10 @@ from tensorflow.keras.models import load_model
 from sklearn.preprocessing import MinMaxScaler
 
 MODEL_PATH = "model.h5"  # Change to .h5
+model = load_model(MODEL_PATH)
 
 TIME_STEPS = 60
-PREDICT_DAYS = 30
+PREDICT_DAYS = 90
 
 def fetch_historical_data(ticker, period="1y"):
     try:
@@ -35,15 +35,12 @@ def prepare_data_for_prediction(historical_data):
     return input_data, scaler
 
 def make_prediction(input_data, scaler):
-    model = load_model(MODEL_PATH)
     predictions = []
     current_input = input_data.copy()
-    
     for _ in range(PREDICT_DAYS):
         pred = model.predict(current_input, verbose=0)
         predictions.append(pred[0][0])
         pred_reshaped = pred.reshape(1, 1, 1)
         current_input = np.append(current_input[:, 1:, :], pred_reshaped, axis=1)
-    
     predictions = scaler.inverse_transform(np.array(predictions).reshape(-1, 1)).flatten()
     return predictions
