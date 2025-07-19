@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 import StockChart from "../components/StockChart.js";
+import { Helmet } from "react-helmet";
 
 const BACKEND_URL =
   process.env.NODE_ENV === "production"
@@ -154,6 +155,15 @@ function StockPredictor() {
 }
 
   return (
+    <>
+          <Helmet>
+            <title>Tic Tac Toe</title>
+            <meta property="og:title" content="Tic Tac Toe Game" />
+            <meta property="og:description" content="Play Tic Tac Toe and view game history." />
+            <meta property="og:image" content="https://cdn-icons-png.flaticon.com/512/2076/2076261.png" /> {/* Tic-tac-toe icon */}
+            <meta property="og:url" content={window.location.href} />
+            <meta property="og:type" content="website" />
+          </Helmet>
     <div
       style={{
         maxWidth: "900px",
@@ -285,6 +295,7 @@ function StockPredictor() {
         </div>
       )}
     </div>
+    </>
   );
 }
 
