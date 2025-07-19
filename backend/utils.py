@@ -7,6 +7,12 @@ import pandas as pd
 from tensorflow.keras.models import load_model
 from sklearn.preprocessing import MinMaxScaler
 
+models = {
+    120: load_model("models/model_120.h5"),
+    #3780: load_model("models/model_3780.h5"),
+    # ... add more if needed
+}
+
 def fetch_historical_data(ticker, period="max"):
     try:
         data = yf.download(ticker, period=period, progress=False, auto_adjust=False)
@@ -27,8 +33,7 @@ def prepare_data_for_prediction(historical_data, time_steps):
     return input_data, scaler
 
 def make_prediction(input_data, scaler, predict_days, time_steps):
-    model_path = f"models/model_{time_steps}.h5"
-    model = load_model(model_path)
+    model = models[time_steps]  # Fast! Already loaded
     predictions = []
     current_input = input_data.copy()
     for _ in range(predict_days):
