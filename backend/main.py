@@ -4,6 +4,9 @@ from pydantic import BaseModel
 import uvicorn
 import pandas as pd  # Add this line
 from utils import fetch_historical_data, prepare_data_for_prediction, make_prediction
+from fastapi import Request
+from fastapi.responses import JSONResponse
+
 
 app = FastAPI()
 
@@ -19,6 +22,14 @@ app.add_middleware(
 
 class PredictionRequest(BaseModel):
     ticker: str
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal Server Error"},
+        headers={"Access-Control-Allow-Origin": "*"}  # Explicitly add if needed
+    )
 
 @app.get("/")
 def read_root():
