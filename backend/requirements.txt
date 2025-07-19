@@ -1,7 +1,7 @@
 fastapi
 uvicorn
-tensorflow  # Assuming Keras/TensorFlow for LSTM; use torch if PyTorch
+tensorflow==2.13.0
 yfinance
 numpy
 pandas
-scikit-learn  # For scaling if needed
+scikit-learn
