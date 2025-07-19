@@ -15,7 +15,7 @@ const localProjects = [
     demo: "/stockpredictor",
     github: "https://github.com/manu4793/manu4793.github.io/tree/main/backend",
     tech: ["React", "FastAPI", "TensorFlow", "Chart.js"],
-    image: "https://uploads.dailydot.com/2024/09/Stonks-Meme.jpg", // optional
+    image: process.env.PUBLIC_URL + "/stonks.jpg" // optional
   },
   {
     name: "Tic Tac Toe Game",
