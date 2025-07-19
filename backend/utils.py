@@ -4,13 +4,15 @@ import pandas as pd
 from tensorflow.keras.models import load_model
 from sklearn.preprocessing import MinMaxScaler
 
-MODEL_PATH = "model.keras"  # Updated to native Keras format
-TIME_STEPS = 60  # Assuming model uses last 60 days for prediction
-PREDICT_DAYS = 5  # Predict next 5 days
+MODEL_PATH = "model.keras"
+TIME_STEPS = 60
+PREDICT_DAYS = 30  # Extended to 30 days
 
-def fetch_historical_data(ticker):
+def fetch_historical_data(ticker, period="1y"):
     try:
-        data = yf.download(ticker, period="1y", progress=False)
+        data = yf.download(ticker, period=period, progress=False, auto_adjust=False)
+        data.columns = data.columns.get_level_values(0)
+        data = data.dropna(subset=['Close'])
         if data.empty:
             return None
         return data
