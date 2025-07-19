@@ -21,7 +21,9 @@ app.add_middleware(
 
 class PredictionRequest(BaseModel):
     ticker: str
-    period: str = "1y"  # Default to 1 year
+    period: str = "1y"
+    time_steps: int = 60
+    predict_days: int = 30
 
 @app.get("/")
 def read_root():
@@ -29,16 +31,20 @@ def read_root():
 
 @app.post("/predict")
 def predict(request: PredictionRequest):
-    ticker = request.ticker.upper()
     
+    ticker = request.ticker.upper()
+    time_steps = 120   
+    predict_days = request.predict_days
+
     # Fetch full historical data
     full_historical = fetch_historical_data(ticker, period="max")
+
     if full_historical is None:
         return {"error": f"Could not fetch data for {ticker}"}
     
     # Determine start date based on period
     last_date = full_historical.index[-1]
-    if request.period == "all":
+    if request.period in ["all", "max"]:
         historical_data = full_historical
     elif request.period == "ytd":
         start_date = pd.Timestamp(f"{last_date.year}-01-01")
@@ -56,11 +62,16 @@ def predict(request: PredictionRequest):
         start_date = last_date - dateutil.relativedelta.relativedelta(**offset)
         historical_data = full_historical[full_historical.index >= start_date]
     
-    # Prepare input for model using full data (last 60 days)
-    input_data, scaler = prepare_data_for_prediction(full_historical)
+    # Prepare input for model using full data (last time_steps days)
+    input_data, scaler = prepare_data_for_prediction(full_historical, time_steps)
     
-    # Make prediction (next 30 days)
-    predictions = make_prediction(input_data, scaler)
+    # Make prediction
+    try:
+        input_data, scaler = prepare_data_for_prediction(full_historical, time_steps)
+        predictions = make_prediction(input_data, scaler, predict_days, time_steps)
+    except Exception as e:
+        print(f"Prediction error: {e}")  # Log for debugging
+        predictions = []  # Empty predictions on failure
     
     # Format response
     historical = {
@@ -68,7 +79,7 @@ def predict(request: PredictionRequest):
         "prices": historical_data['Close'].values.tolist()
     }
     # Predicted dates using business days
-    predicted_dates = pd.bdate_range(start=last_date + pd.Timedelta(days=1), periods=90).strftime("%Y-%m-%d").tolist()
+    predicted_dates = pd.bdate_range(start=last_date + pd.Timedelta(days=1), periods=len(predictions)).strftime("%Y-%m-%d").tolist() if len(predictions) > 0 else []
     predicted = {
         "dates": predicted_dates,
         "prices": predictions.tolist()

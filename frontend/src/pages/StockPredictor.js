@@ -30,12 +30,52 @@ const popularStocks = [
   { ticker: 'JNJ', name: 'Johnson & Johnson' },
 ];
 
+const timeStepOptions = [
+  { label: '1 Day', value: 1 },
+  { label: '5 Days', value: 5 },
+  { label: '1 Month', value: 20 },
+  { label: '6 Months', value: 120 },
+  { label: '1 Year', value: 252 },
+  { label: '5 Years', value: 1260 },
+];
+const displayOptions = [
+  { label: '1 Day', value: '1d' },
+  { label: '5 Days', value: '5d' },
+  { label: '1 Month', value: '1m' },
+  { label: '6 Months', value: '6m' },
+  { label: '1 Year', value: '1y' },
+  { label: '5 Years', value: '5y' },
+  { label: 'All', value: 'max' },
+];
+const predictDaysOptions = [
+  { label: '1 Day', value: 1 },
+  { label: '5 Days', value: 5 },
+  { label: '10 Days', value: 10 },
+  { label: '1 Month', value: 20 },
+  { label: '3 Months', value: 60 },
+  { label: '6 Months', value: 120 },
+];
+
+// Mapping for period sizes (in approximate days) to compare for auto-refetch
+const periodSizes = {
+  '1d': 1,
+  '5d': 5,
+  '1m': 30,
+  '6m': 180,
+  '1y': 365,
+  '5y': 1825,
+  'max': 9999
+};
+
 function StockPredictor() {
   const [ticker, setTicker] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [displayPeriod, setDisplayPeriod] = useState("1y"); // for chart only
+  const [timeSteps, setTimeSteps] = useState(120); // or just hardcode
+  const [predictDays, setPredictDays] = useState(20); // Changed to 20 for default "1 Month" selection
 
   const handleInputChange = (e) => {
     const value = e.target.value.toUpperCase();
@@ -67,7 +107,12 @@ function StockPredictor() {
     setSuggestions([]); // Clear suggestions on submit
 
     try {
-      const response = await axios.post(`${BACKEND_URL}/predict`, { ticker });
+      const response = await axios.post(`${BACKEND_URL}/predict`, { 
+      ticker,
+      period: "max", // Always fetch the longest history available
+      time_steps: timeSteps, 
+      predict_days: predictDays 
+    });
       setData(response.data);
     } catch (err) {
       setError(err.message || "Failed to fetch prediction");
@@ -75,6 +120,38 @@ function StockPredictor() {
       setLoading(false);
     }
   };
+
+  function filterHistorical(data, displayPeriod) {
+  if (!data || !data.historical || !data.historical.dates) return data;
+  const { dates, prices } = data.historical;
+  let cutoffIdx = 0;
+
+  if (displayPeriod !== 'max') {
+    const lastDate = new Date(dates[dates.length - 1]);
+    let startDate = new Date(lastDate);
+
+    switch (displayPeriod) {
+      case '1d': startDate.setDate(lastDate.getDate() - 1); break;
+      case '5d': startDate.setDate(lastDate.getDate() - 5); break;
+      case '1m': startDate.setMonth(lastDate.getMonth() - 1); break;
+      case '6m': startDate.setMonth(lastDate.getMonth() - 6); break;
+      case '1y': startDate.setFullYear(lastDate.getFullYear() - 1); break;
+      case '5y': startDate.setFullYear(lastDate.getFullYear() - 5); break;
+      default: break;
+    }
+
+    cutoffIdx = dates.findIndex(d => new Date(d) >= startDate);
+    if (cutoffIdx === -1) cutoffIdx = 0;
+  }
+
+  return {
+    ...data,
+    historical: {
+      dates: data.historical.dates.slice(cutoffIdx),
+      prices: data.historical.prices.slice(cutoffIdx),
+    }
+  };
+}
 
   return (
     <div
@@ -100,6 +177,55 @@ function StockPredictor() {
           required
           style={{ marginBottom: "10px", width: "100%", maxWidth: "400px", padding: "8px" }}
         />
+        <div style={{ display: "flex", gap: "20px", marginBottom: "10px" }}>
+  <div>
+        <div style={{ marginBottom: "4px" }}>History Window:</div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+          {displayOptions.map(option => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setDisplayPeriod(option.value)}
+              style={{
+                padding: "8px",
+                backgroundColor: displayPeriod === option.value ? "#007bff" : "#f0f0f0",
+                color: displayPeriod === option.value ? "#fff" : "#333",
+                border: "1px solid #ccc",
+                borderRadius: "4px",
+                cursor: "pointer",
+                fontWeight: displayPeriod === option.value ? "bold" : "normal"
+              }}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+
+          </div>
+          <div>
+            <div style={{ marginBottom: "4px" }}>Predict Days:</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+              {predictDaysOptions.map(option => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setPredictDays(option.value)}
+                  style={{
+                    padding: "8px",
+                    backgroundColor: predictDays === option.value ? "#007bff" : "#f0f0f0",
+                    color: predictDays === option.value ? "#fff" : "#333",
+                    border: "1px solid #ccc",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                    fontWeight: predictDays === option.value ? "bold" : "normal"
+                  }}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
         {suggestions.length > 0 && (
           <ul
             style={{
@@ -154,7 +280,7 @@ function StockPredictor() {
             <p style={{ color: "orange", textAlign: "center" }}>No historical prices available. Check backend data.</p>
           )}
           <div style={{ height: "400px" }}> {/* Fixed height for better control on mobile */}
-            <StockChart historical={data.historical} predicted={data.predicted} />
+            <StockChart historical={filterHistorical(data, displayPeriod).historical} predicted={data.predicted} />
           </div>
         </div>
       )}
