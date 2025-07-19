@@ -157,10 +157,10 @@ function StockPredictor() {
   return (
     <>
           <Helmet>
-            <title>Tic Tac Toe</title>
-            <meta property="og:title" content="Tic Tac Toe Game" />
-            <meta property="og:description" content="Play Tic Tac Toe and view game history." />
-            <meta property="og:image" content="https://cdn-icons-png.flaticon.com/512/2076/2076261.png" /> {/* Tic-tac-toe icon */}
+            <title>Stonks</title>
+            <meta property="og:title" content="Stick Price Predictor" />
+            <meta property="og:description" content="Predic the stock exchange!" />
+            <meta property="og:image" content={process.env.PUBLIC_URL + "/stonks.jpg"} />
             <meta property="og:url" content={window.location.href} />
             <meta property="og:type" content="website" />
           </Helmet>
