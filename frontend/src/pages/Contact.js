@@ -90,7 +90,7 @@ export default function Contact() {
           )}
           {status === 'error' && (
             <div className="alert alert-danger mt-3" role="alert">
-              Failed to send message. Please try again. Check console for details.
+              Failed to send message. Invalid email address.
             </div>
           )}
         </div>
