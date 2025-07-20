@@ -65,10 +65,6 @@ def replace_nan_in_indicators(indicators_data):
             indicators_data[key] = replace_nan_with_none(value)
     return indicators_data
 
-import requests  # Add this import
-
-# ... (existing code)
-
 @app.get("/search_ticker")
 def search_ticker(query: str):
     if not query:
