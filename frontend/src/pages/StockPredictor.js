@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import StockChart from "../components/StockChart.js";
 import { Helmet } from "react-helmet";
-import './StockPredictor.css'; 
+import './StockPredictor.css';
 
 const BACKEND_URL =
   process.env.NODE_ENV === "production"
@@ -69,18 +69,14 @@ const indicatorOptions = [
   { label: 'EMA (200)', value: 'ema200' },
 ];
 
-// Mapping for period sizes (in approximate days) to compare for auto-refetch
-const periodSizes = {
-  '1d': 1,
-  '5d': 5,
-  '1m': 30,
-  '3m': 90,
-  '6m': 180,
-  'ytd': 365, // Approximate, actual handled in backend
-  '1y': 365,
-  '5y': 1825,
-  'max': 9999
-};
+// Debounce utility function (outside the component)
+function debounce(func, delay) {
+  let timeoutId;
+  return (...args) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func(...args), delay);
+  };
+}
 
 function StockPredictor() {
   const [ticker, setTicker] = useState("");
@@ -89,24 +85,62 @@ function StockPredictor() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [displayPeriod, setDisplayPeriod] = useState("1y");
-  const [selectedModel, setSelectedModel] = useState(20); // Default model
-  const [predictDays, setPredictDays] = useState(20); // Default predict days
-  const [selectedIndicators, setSelectedIndicators] = useState([]); // For indicators
+  const [selectedModel, setSelectedModel] = useState(20);
+  const [predictDays, setPredictDays] = useState(20);
+  const [selectedIndicators, setSelectedIndicators] = useState([]);
+
+  const fetchSuggestions = debounce(async (value) => {
+    if (!value) {
+      setSuggestions(popularStocks);
+      return;
+    }
+    if (value.length < 1) {
+      setSuggestions([]);
+      return;
+    }
+    try {
+      const response = await axios.get(`${BACKEND_URL}/search_ticker?query=${value.toUpperCase()}`);
+      const results = response.data.results || [];
+      let mappedSuggestions = results.map((item) => ({
+        ticker: item.ticker,
+        name: item.name,
+      }));
+      if (value.length === 1) {
+        const upperValue = value.toUpperCase();
+        const filtered = popularStocks.filter(
+          (stock) =>
+            stock.ticker.toUpperCase().startsWith(upperValue) ||
+            stock.name.toUpperCase().startsWith(upperValue)
+        );
+        const uniqueFiltered = filtered.filter(
+          (stock) => !mappedSuggestions.some((s) => s.ticker === stock.ticker)
+        );
+        mappedSuggestions = [...mappedSuggestions, ...uniqueFiltered];
+      }
+      setSuggestions(mappedSuggestions);
+    } catch (err) {
+      // Fallback to local popularStocks filtering
+      const filtered = popularStocks.filter(
+        (stock) =>
+          stock.ticker.toUpperCase().startsWith(value.toUpperCase()) ||
+          stock.name.toUpperCase().startsWith(value.toUpperCase())
+      );
+      setSuggestions(filtered);
+    }
+  }, 300);
 
   const handleInputChange = (e) => {
     const value = e.target.value.toUpperCase();
     setTicker(value);
+    fetchSuggestions(value);
+  };
 
-    if (!value) {
-      setSuggestions([]); // Hide suggestions if empty
-    } else {
-      const filtered = popularStocks.filter(
-        (stock) =>
-          stock.ticker.toUpperCase().startsWith(value) ||
-          stock.name.toUpperCase().includes(value)
-      );
-      setSuggestions(filtered);
-    }
+  const handleFocus = () => {
+    fetchSuggestions(ticker);
+  };
+
+  const handleBlur = () => {
+    setTimeout(() => setSuggestions([]), 200);
   };
 
   const handleSelectSuggestion = (selectedTicker) => {
@@ -128,12 +162,11 @@ function StockPredictor() {
     setLoading(true);
     setError(null);
     setData(null);
-    setSuggestions([]); // Clear suggestions on submit
-
+    setSuggestions([]);
     try {
-      const response = await axios.post(`${BACKEND_URL}/predict`, { 
+      const response = await axios.post(`${BACKEND_URL}/predict`, {
         ticker,
-        period: "max", // Always fetch max, filter frontend
+        period: "max",
         time_steps: selectedModel,
         predict_days: predictDays,
       });
@@ -148,58 +181,6 @@ function StockPredictor() {
       setLoading(false);
     }
   };
-
-  function filterHistorical(data, displayPeriod) {
-    if (!data || !data.historical || !data.historical.dates) return data;
-    const { dates, prices } = data.historical;
-    let cutoffIdx = 0;
-  
-    if (displayPeriod !== 'max') {
-      const lastDate = new Date(dates[dates.length - 1]);
-      let startDate = new Date(lastDate);
-  
-      switch (displayPeriod) {
-        case '1d': startDate.setDate(lastDate.getDate() - 1); break;
-        case '5d': startDate.setDate(lastDate.getDate() - 5); break;
-        case '1m': startDate.setMonth(lastDate.getMonth() - 1); break;
-        case '3m': startDate.setMonth(lastDate.getMonth() - 3); break;
-        case '6m': startDate.setMonth(lastDate.getMonth() - 6); break;
-        case 'ytd': startDate = new Date(lastDate.getFullYear(), 0, 1); break;
-        case '1y': startDate.setFullYear(lastDate.getFullYear() - 1); break;
-        case '5y': startDate.setFullYear(lastDate.getFullYear() - 5); break;
-        default: break;
-      }
-  
-      cutoffIdx = dates.findIndex(d => new Date(d) >= startDate);
-      if (cutoffIdx === -1) cutoffIdx = 0;
-    }
-  
-    const filteredHistorical = {
-      dates: dates.slice(cutoffIdx),
-      prices: prices.slice(cutoffIdx),
-    };
-
-    // Filter indicators if present
-    const filteredData = { ...data, historical: filteredHistorical };
-    if (data.indicators) {
-      filteredData.indicators = {};
-      Object.keys(data.indicators).forEach(key => {
-        const value = data.indicators[key];
-        if (Array.isArray(value)) {
-          filteredData.indicators[key] = value.slice(cutoffIdx);
-        } else if (typeof value === 'object' && value !== null) {
-          filteredData.indicators[key] = {};
-          Object.keys(value).forEach(subkey => {
-            if (Array.isArray(value[subkey])) {
-              filteredData.indicators[key][subkey] = value[subkey].slice(cutoffIdx);
-            }
-          });
-        }
-      });
-    }
-
-    return filteredData;
-  }
 
   return (
     <>
@@ -231,6 +212,8 @@ function StockPredictor() {
               type="text"
               value={ticker}
               onChange={handleInputChange}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
               placeholder="Search ticker (e.g., NVDA)"
               required
               style={{ width: "100%", maxWidth: "600px", padding: "10px", marginBottom: "20px", fontSize: "16px" }}
@@ -272,8 +255,8 @@ function StockPredictor() {
             <div className="predict-options-row">
               <div>
                 <label style={{ display: "block", marginBottom: "5px" }}>Predict based on:</label>
-                <select 
-                  value={selectedModel} 
+                <select
+                  value={selectedModel}
                   onChange={(e) => setSelectedModel(parseInt(e.target.value))}
                   style={{ padding: "8px", width: "200px" }}
                 >
@@ -284,8 +267,8 @@ function StockPredictor() {
               </div>
               <div>
                 <label style={{ display: "block", marginBottom: "5px" }}>Predict the next:</label>
-                <select 
-                  value={predictDays} 
+                <select
+                  value={predictDays}
                   onChange={(e) => setPredictDays(parseInt(e.target.value))}
                   style={{ padding: "8px", width: "200px" }}
                 >
@@ -305,8 +288,8 @@ function StockPredictor() {
                 <label>Indicators:</label>
                 {indicatorOptions.map(option => (
                   <label key={option.value} style={{ marginRight: "10px" }}>
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       checked={selectedIndicators.includes(option.value)}
                       onChange={() => handleIndicatorChange(option.value)}
                     />
@@ -333,17 +316,17 @@ function StockPredictor() {
                   </button>
                 ))}
               </div>
-              <div 
-                style={{ 
-                  backgroundColor: "white", 
-                  borderRadius: "8px", 
-                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)", 
-                  padding: "10px", 
+              <div
+                style={{
+                  backgroundColor: "white",
+                  borderRadius: "8px",
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                  padding: "10px",
                   marginTop: "20px",
-                  height: "500px" 
+                  height: "500px"
                 }}
               >
-                <StockChart data={filterHistorical(data, displayPeriod)} selectedIndicators={selectedIndicators} />
+                <StockChart data={data} displayPeriod={displayPeriod} selectedIndicators={selectedIndicators} />
               </div>
             </>
           )}

@@ -6,11 +6,14 @@ import {
   LinearScale,
   PointElement,
   LineElement,
+  BarElement,
   Title,
   Tooltip,
   Legend,
-  BarElement,
+  TimeScale,
 } from "chart.js";
+import zoomPlugin from "chartjs-plugin-zoom";
+import 'chartjs-adapter-date-fns';
 
 ChartJS.register(
   CategoryScale,
@@ -20,17 +23,81 @@ ChartJS.register(
   BarElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  TimeScale,
+  zoomPlugin
 );
 
-function StockChart({ data, selectedIndicators }) {
+function StockChart({ data, selectedIndicators, displayPeriod }) {
   const { historical, predicted, indicators } = data;
-  const chartLabels = [...historical.dates, ...predicted.dates];
 
+  // Collect all unique dates
+  const allDatesSet = new Set([...historical.dates, ...predicted.dates]);
+  const allDates = Array.from(allDatesSet).sort((a, b) => new Date(a) - new Date(b));
+
+  // Create maps for quick lookup
+  const histMap = new Map(historical.dates.map((d, i) => [d, historical.prices[i]]));
+  const predMap = new Map(predicted.dates.map((d, i) => [d, predicted.prices[i]]));
+
+  // Maps for indicators
+  let rsiMap = new Map();
+  let macdMap = new Map();
+  let macdSignalMap = new Map();
+  let macdHistMap = new Map();
+  let sma50Map = new Map();
+  let ema200Map = new Map();
+
+  if (indicators) {
+    if (indicators.rsi) {
+      rsiMap = new Map(historical.dates.map((d, i) => [d, indicators.rsi[i]]));
+    }
+    if (indicators.macd) {
+      macdMap = new Map(historical.dates.map((d, i) => [d, indicators.macd.macd[i]]));
+      macdSignalMap = new Map(historical.dates.map((d, i) => [d, indicators.macd.signal[i]]));
+      macdHistMap = new Map(historical.dates.map((d, i) => [d, indicators.macd.histogram[i]]));
+    }
+    if (indicators.sma50) {
+      sma50Map = new Map(historical.dates.map((d, i) => [d, indicators.sma50[i]]));
+    }
+    if (indicators.ema200) {
+      ema200Map = new Map(historical.dates.map((d, i) => [d, indicators.ema200[i]]));
+    }
+  }
+
+  // Compute startDate based on displayPeriod
+  let startDate = new Date();
+  const lastHistoricalDate = historical.dates[historical.dates.length - 1];
+  const firstHistoricalDate = historical.dates[0];
+  const lastPredictedDate = predicted.dates[predicted.dates.length - 1] || lastHistoricalDate;
+
+  const lastDateObj = new Date(lastHistoricalDate);
+  startDate = new Date(lastDateObj);
+
+  if (displayPeriod !== 'max') {
+    switch (displayPeriod) {
+      case '1d': startDate.setDate(lastDateObj.getDate() - 1); break;
+      case '5d': startDate.setDate(lastDateObj.getDate() - 5); break;
+      case '1m': startDate.setMonth(lastDateObj.getMonth() - 1); break;
+      case '3m': startDate.setMonth(lastDateObj.getMonth() - 3); break;
+      case '6m': startDate.setMonth(lastDateObj.getMonth() - 6); break;
+      case 'ytd': startDate = new Date(lastDateObj.getFullYear(), 0, 1); break;
+      case '1y': startDate.setFullYear(lastDateObj.getFullYear() - 1); break;
+      case '5y': startDate.setFullYear(lastDateObj.getFullYear() - 5); break;
+      default: break;
+    }
+  } else {
+    startDate = new Date(firstHistoricalDate);
+  }
+
+  const startDateStr = startDate.toISOString().slice(0, 10);
+  const minLimit = firstHistoricalDate;
+  const maxLimit = lastPredictedDate;
+
+  // Prepare datasets with {x, y}, aligned to allDates
   let datasets = [
     {
       label: "Historical Prices",
-      data: [...historical.prices, ...Array(predicted.prices.length).fill(null)],
+      data: allDates.map((d) => ({ x: d, y: histMap.get(d) || null })),
       borderColor: "blue",
       backgroundColor: "rgba(0, 0, 255, 0.1)",
       fill: false,
@@ -39,7 +106,7 @@ function StockChart({ data, selectedIndicators }) {
     },
     {
       label: "Predicted Prices",
-      data: Array(historical.prices.length).fill(null).concat(predicted.prices),
+      data: allDates.map((d) => ({ x: d, y: predMap.get(d) || null })),
       borderColor: "green",
       backgroundColor: "rgba(0, 255, 0, 0.1)",
       fill: false,
@@ -54,7 +121,7 @@ function StockChart({ data, selectedIndicators }) {
     if (selectedIndicators.includes('rsi') && indicators.rsi) {
       datasets.push({
         label: "RSI (14)",
-        data: [...indicators.rsi, ...Array(predicted.prices.length).fill(null)],
+        data: allDates.map((d) => ({ x: d, y: rsiMap.get(d) || null })),
         borderColor: "purple",
         yAxisID: 'y1',
         pointRadius: 0,
@@ -63,14 +130,14 @@ function StockChart({ data, selectedIndicators }) {
     if (selectedIndicators.includes('macd') && indicators.macd) {
       datasets.push({
         label: "MACD Line",
-        data: [...indicators.macd.macd, ...Array(predicted.prices.length).fill(null)],
+        data: allDates.map((d) => ({ x: d, y: macdMap.get(d) || null })),
         borderColor: "red",
         yAxisID: 'y2',
         pointRadius: 0,
       });
       datasets.push({
         label: "MACD Signal",
-        data: [...indicators.macd.signal, ...Array(predicted.prices.length).fill(null)],
+        data: allDates.map((d) => ({ x: d, y: macdSignalMap.get(d) || null })),
         borderColor: "orange",
         yAxisID: 'y2',
         pointRadius: 0,
@@ -78,7 +145,7 @@ function StockChart({ data, selectedIndicators }) {
       datasets.push({
         type: 'bar',
         label: "MACD Histogram",
-        data: [...indicators.macd.histogram, ...Array(predicted.prices.length).fill(null)],
+        data: allDates.map((d) => ({ x: d, y: macdHistMap.get(d) || null })),
         backgroundColor: "rgba(0, 255, 0, 0.5)",
         yAxisID: 'y2',
       });
@@ -86,7 +153,7 @@ function StockChart({ data, selectedIndicators }) {
     if (selectedIndicators.includes('sma50') && indicators.sma50) {
       datasets.push({
         label: "SMA (50)",
-        data: [...indicators.sma50, ...Array(predicted.prices.length).fill(null)],
+        data: allDates.map((d) => ({ x: d, y: sma50Map.get(d) || null })),
         borderColor: "cyan",
         yAxisID: 'y',
         pointRadius: 0,
@@ -95,7 +162,7 @@ function StockChart({ data, selectedIndicators }) {
     if (selectedIndicators.includes('ema200') && indicators.ema200) {
       datasets.push({
         label: "EMA (200)",
-        data: [...indicators.ema200, ...Array(predicted.prices.length).fill(null)],
+        data: allDates.map((d) => ({ x: d, y: ema200Map.get(d) || null })),
         borderColor: "magenta",
         yAxisID: 'y',
         pointRadius: 0,
@@ -106,12 +173,52 @@ function StockChart({ data, selectedIndicators }) {
   const options = {
     responsive: true,
     maintainAspectRatio: false,
+    interaction: {
+      mode: 'index',
+      intersect: false,
+    },
     plugins: {
       title: { display: true, text: "Stock Price Chart" },
       legend: { position: "top" },
+      tooltip: {
+        enabled: true,
+        filter: (tooltipItem) => tooltipItem.parsed.y !== null,
+      },
+      zoom: {
+        pan: {
+          enabled: true,
+          mode: 'x',
+        },
+        zoom: {
+          wheel: {
+            enabled: true,
+          },
+          pinch: {
+            enabled: true,
+          },
+          mode: 'x',
+        },
+        limits: {
+          x: {
+            min: minLimit,
+            max: maxLimit,
+          },
+        },
+      },
     },
     scales: {
       x: {
+        type: 'time',
+        time: {
+          unit: 'day',
+          parser: 'yyyy-MM-dd',
+          displayFormats: {
+            day: 'MMM d, yyyy',
+            month: 'MMM yyyy',
+            year: 'yyyy',
+          },
+          tooltipFormat: 'PP',
+        },
         title: { display: true, text: "Date" },
         ticks: {
           autoSkip: true,
@@ -119,6 +226,8 @@ function StockChart({ data, selectedIndicators }) {
           maxRotation: 45,
           minRotation: 45,
         },
+        min: startDateStr,
+        max: maxLimit,
       },
       y: {
         type: 'linear',
@@ -143,9 +252,10 @@ function StockChart({ data, selectedIndicators }) {
         title: { display: true, text: "MACD" },
       },
     },
+
   };
 
-  return <Line options={options} data={{ labels: chartLabels, datasets }} />;
+  return <Line options={options} data={{ datasets }} />;
 }
 
 export default StockChart;
