@@ -7,6 +7,7 @@ import numpy as np
 from utils import fetch_historical_data, prepare_data_for_prediction, make_prediction
 from datetime import datetime
 import dateutil.relativedelta
+import requests  # Add this import
 
 app = FastAPI()
 
@@ -64,7 +65,39 @@ def replace_nan_in_indicators(indicators_data):
             indicators_data[key] = replace_nan_with_none(value)
     return indicators_data
 
-@app.get("/")
+import requests  # Add this import
+
+# ... (existing code)
+
+@app.get("/search_ticker")
+def search_ticker(query: str):
+    if not query:
+        return {"results": []}
+    
+    try:
+        url = f"https://query1.finance.yahoo.com/v1/finance/search?q={query}&quotesCount=15&newsCount=0"
+        headers = {'User-Agent': 'Mozilla/5.0'}  # To mimic a browser and avoid blocks
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        data = response.json()
+        
+        # Extract and filter quotes (only EQUITY types for stocks)
+        quotes = data.get('quotes', [])
+        filtered_results = [
+            {
+                "ticker": quote['symbol'],
+                "name": quote.get('longname') or quote.get('shortname') or quote['symbol'],
+                "exchange": quote.get('exchange'),
+                "type": quote['quoteType']
+            }
+            for quote in quotes if quote.get('quoteType') == 'EQUITY'  # Filter to stocks only
+        ]
+        
+        return {"results": filtered_results[:10]}  # Limit to 10 results
+    except Exception as e:
+        print(f"Search error: {e}")
+        return {"results": [], "error": "Failed to fetch suggestions"}
+    
 def read_root():
     return {"message": "Stock Prediction API is running"}
 
