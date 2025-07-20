@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import StockChart from "../components/StockChart.js";
 import { Helmet } from "react-helmet";
+import './StockPredictor.css'; 
 
 const BACKEND_URL =
   process.env.NODE_ENV === "production"
@@ -212,10 +213,11 @@ function StockPredictor() {
       </Helmet>
       <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-start", minHeight: "100vh" }}>
         <div
+          className="stock-card"
           style={{
-            maxWidth: "50%",
-            width: "100%",
-            padding: "20px",
+            maxWidth: window.innerWidth < 600 ? "98vw" : "50%",
+            width: window.innerWidth < 600 ? "98vw" : "100%",
+            padding: window.innerWidth < 600 ? "10px" : "20px",
             backgroundColor: "white",
             borderRadius: "16px",
             boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
@@ -224,7 +226,7 @@ function StockPredictor() {
           }}
         >
           <h1 style={{ marginBottom: "20px" }}>Stock Price Predictor</h1>
-          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
+          <form className="stock-form" onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
             <input
               type="text"
               value={ticker}
@@ -266,7 +268,8 @@ function StockPredictor() {
                 ))}
               </ul>
             )}
-            <div style={{ display: "flex", justifyContent: "center", gap: "20px", marginBottom: "20px" }}>
+            {/* Predict options row, centered */}
+            <div className="predict-options-row">
               <div>
                 <label style={{ display: "block", marginBottom: "5px" }}>Predict based on:</label>
                 <select 
@@ -298,7 +301,7 @@ function StockPredictor() {
           {error && <p style={{ color: "red", marginTop: "20px" }}>{error}</p>}
           {data && (
             <>
-              <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginTop: "20px", marginBottom: "10px" }}>
+              <div className="indicator-row" style={{ display: "flex", justifyContent: "center", gap: "10px", marginTop: "20px", marginBottom: "10px" }}>
                 <label>Indicators:</label>
                 {indicatorOptions.map(option => (
                   <label key={option.value} style={{ marginRight: "10px" }}>
@@ -311,7 +314,7 @@ function StockPredictor() {
                   </label>
                 ))}
               </div>
-              <div style={{ display: "flex", justifyContent: "center", marginTop: "20px", marginBottom: "10px" }}>
+              <div className="time-range-row" style={{ display: "flex", justifyContent: "center", marginTop: "20px", marginBottom: "10px" }}>
                 {timeRangeOptions.map(option => (
                   <button
                     key={option.value}
