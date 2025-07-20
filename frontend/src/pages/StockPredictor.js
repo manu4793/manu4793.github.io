@@ -268,7 +268,7 @@ function StockPredictor() {
             )}
             <div style={{ display: "flex", justifyContent: "center", gap: "20px", marginBottom: "20px" }}>
               <div>
-                <label style={{ display: "block", marginBottom: "5px" }}>Predict Based on:</label>
+                <label style={{ display: "block", marginBottom: "5px" }}>Predict based on:</label>
                 <select 
                   value={selectedModel} 
                   onChange={(e) => setSelectedModel(parseInt(e.target.value))}
