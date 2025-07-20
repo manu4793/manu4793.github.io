@@ -31,23 +31,27 @@ const popularStocks = [
   { ticker: 'JNJ', name: 'Johnson & Johnson' },
 ];
 
-const timeStepOptions = [
-  { label: '1 Day', value: 1 },
-  { label: '5 Days', value: 5 },
-  { label: '1 Month', value: 20 },
-  { label: '6 Months', value: 120 },
-  { label: '1 Year', value: 252 },
-  { label: '5 Years', value: 1260 },
+const timeRangeOptions = [
+  { label: '1D', value: '1d' },
+  { label: '5D', value: '5d' },
+  { label: '1M', value: '1m' },
+  { label: '3M', value: '3m' },
+  { label: '6M', value: '6m' },
+  { label: 'YTD', value: 'ytd' },
+  { label: '1Y', value: '1y' },
+  { label: '5Y', value: '5y' },
+  { label: 'MAX', value: 'max' },
 ];
-const displayOptions = [
-  { label: '1 Day', value: '1d' },
-  { label: '5 Days', value: '5d' },
-  { label: '1 Month', value: '1m' },
-  { label: '6 Months', value: '6m' },
-  { label: '1 Year', value: '1y' },
-  { label: '5 Years', value: '5y' },
-  { label: 'All', value: 'max' },
+
+const modelOptions = [
+  { label: 'Last day', value: 1 },
+  { label: 'Last 5 days', value: 5 },
+  { label: 'Last 10 days', value: 10 },
+  { label: 'Last month', value: 20 },
+  { label: 'Last 3 months', value: 60 },
+  { label: 'Last 6 months', value: 120 },
 ];
+
 const predictDaysOptions = [
   { label: '1 Day', value: 1 },
   { label: '5 Days', value: 5 },
@@ -57,12 +61,21 @@ const predictDaysOptions = [
   { label: '6 Months', value: 120 },
 ];
 
+const indicatorOptions = [
+  { label: 'RSI (14)', value: 'rsi' },
+  { label: 'MACD', value: 'macd' },
+  { label: 'SMA (50)', value: 'sma50' },
+  { label: 'EMA (200)', value: 'ema200' },
+];
+
 // Mapping for period sizes (in approximate days) to compare for auto-refetch
 const periodSizes = {
   '1d': 1,
   '5d': 5,
   '1m': 30,
+  '3m': 90,
   '6m': 180,
+  'ytd': 365, // Approximate, actual handled in backend
   '1y': 365,
   '5y': 1825,
   'max': 9999
@@ -74,9 +87,10 @@ function StockPredictor() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [displayPeriod, setDisplayPeriod] = useState("1y"); // for chart only
-  const [timeSteps, setTimeSteps] = useState(120); // or just hardcode
-  const [predictDays, setPredictDays] = useState(20); // Changed to 20 for default "1 Month" selection
+  const [displayPeriod, setDisplayPeriod] = useState("1y");
+  const [selectedModel, setSelectedModel] = useState(20); // Default model
+  const [predictDays, setPredictDays] = useState(20); // Default predict days
+  const [selectedIndicators, setSelectedIndicators] = useState([]); // For indicators
 
   const handleInputChange = (e) => {
     const value = e.target.value.toUpperCase();
@@ -99,6 +113,14 @@ function StockPredictor() {
     setSuggestions([]);
   };
 
+  const handleIndicatorChange = (indicator) => {
+    setSelectedIndicators((prev) =>
+      prev.includes(indicator)
+        ? prev.filter((i) => i !== indicator)
+        : [...prev, indicator]
+    );
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!ticker) return;
@@ -109,12 +131,16 @@ function StockPredictor() {
 
     try {
       const response = await axios.post(`${BACKEND_URL}/predict`, { 
-      ticker,
-      period: "max", // Always fetch the longest history available
-      time_steps: timeSteps, 
-      predict_days: predictDays 
-    });
-      setData(response.data);
+        ticker,
+        period: "max", // Always fetch max, filter frontend
+        time_steps: selectedModel,
+        predict_days: predictDays,
+      });
+      const resData = response.data;
+      setData(resData);
+      if (resData.error) {
+        setError(resData.error);
+      }
     } catch (err) {
       setError(err.message || "Failed to fetch prediction");
     } finally {
@@ -123,178 +149,203 @@ function StockPredictor() {
   };
 
   function filterHistorical(data, displayPeriod) {
-  if (!data || !data.historical || !data.historical.dates) return data;
-  const { dates, prices } = data.historical;
-  let cutoffIdx = 0;
+    if (!data || !data.historical || !data.historical.dates) return data;
+    const { dates, prices } = data.historical;
+    let cutoffIdx = 0;
+  
+    if (displayPeriod !== 'max') {
+      const lastDate = new Date(dates[dates.length - 1]);
+      let startDate = new Date(lastDate);
+  
+      switch (displayPeriod) {
+        case '1d': startDate.setDate(lastDate.getDate() - 1); break;
+        case '5d': startDate.setDate(lastDate.getDate() - 5); break;
+        case '1m': startDate.setMonth(lastDate.getMonth() - 1); break;
+        case '3m': startDate.setMonth(lastDate.getMonth() - 3); break;
+        case '6m': startDate.setMonth(lastDate.getMonth() - 6); break;
+        case 'ytd': startDate = new Date(lastDate.getFullYear(), 0, 1); break;
+        case '1y': startDate.setFullYear(lastDate.getFullYear() - 1); break;
+        case '5y': startDate.setFullYear(lastDate.getFullYear() - 5); break;
+        default: break;
+      }
+  
+      cutoffIdx = dates.findIndex(d => new Date(d) >= startDate);
+      if (cutoffIdx === -1) cutoffIdx = 0;
+    }
+  
+    const filteredHistorical = {
+      dates: dates.slice(cutoffIdx),
+      prices: prices.slice(cutoffIdx),
+    };
 
-  if (displayPeriod !== 'max') {
-    const lastDate = new Date(dates[dates.length - 1]);
-    let startDate = new Date(lastDate);
-
-    switch (displayPeriod) {
-      case '1d': startDate.setDate(lastDate.getDate() - 1); break;
-      case '5d': startDate.setDate(lastDate.getDate() - 5); break;
-      case '1m': startDate.setMonth(lastDate.getMonth() - 1); break;
-      case '6m': startDate.setMonth(lastDate.getMonth() - 6); break;
-      case '1y': startDate.setFullYear(lastDate.getFullYear() - 1); break;
-      case '5y': startDate.setFullYear(lastDate.getFullYear() - 5); break;
-      default: break;
+    // Filter indicators if present
+    const filteredData = { ...data, historical: filteredHistorical };
+    if (data.indicators) {
+      filteredData.indicators = {};
+      Object.keys(data.indicators).forEach(key => {
+        const value = data.indicators[key];
+        if (Array.isArray(value)) {
+          filteredData.indicators[key] = value.slice(cutoffIdx);
+        } else if (typeof value === 'object' && value !== null) {
+          filteredData.indicators[key] = {};
+          Object.keys(value).forEach(subkey => {
+            if (Array.isArray(value[subkey])) {
+              filteredData.indicators[key][subkey] = value[subkey].slice(cutoffIdx);
+            }
+          });
+        }
+      });
     }
 
-    cutoffIdx = dates.findIndex(d => new Date(d) >= startDate);
-    if (cutoffIdx === -1) cutoffIdx = 0;
+    return filteredData;
   }
-
-  return {
-    ...data,
-    historical: {
-      dates: data.historical.dates.slice(cutoffIdx),
-      prices: data.historical.prices.slice(cutoffIdx),
-    }
-  };
-}
 
   return (
     <>
-          <Helmet>
-            <title>Stonks</title>
-            <meta property="og:title" content="Stick Price Predictor" />
-            <meta property="og:description" content="Predic the stock exchange!" />
-            <meta property="og:image" content={process.env.PUBLIC_URL + "/stonks.jpg"} />
-            <meta property="og:url" content={window.location.href} />
-            <meta property="og:type" content="website" />
-          </Helmet>
-    <div
-      style={{
-        maxWidth: "900px",
-        width: "100%",
-        margin: "20px auto",
-        border: "1px solid #ccc",
-        padding: "20px",
-        borderRadius: "8px",
-        boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-        backgroundColor: "white",
-        boxSizing: "border-box",
-      }}
-    >
-      <h1 style={{ textAlign: "center" }}>Stock Price Predictor</h1>
-      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
-        <input
-          type="text"
-          value={ticker}
-          onChange={handleInputChange}
-          placeholder="Enter stock ticker or company name (e.g., AAPL)"
-          required
-          style={{ marginBottom: "10px", width: "100%", maxWidth: "400px", padding: "8px" }}
-        />
-        <div style={{ display: "flex", gap: "20px", marginBottom: "10px" }}>
-  <div>
-        <div style={{ marginBottom: "4px" }}>History Window:</div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-          {displayOptions.map(option => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => setDisplayPeriod(option.value)}
-              style={{
-                padding: "8px",
-                backgroundColor: displayPeriod === option.value ? "#007bff" : "#f0f0f0",
-                color: displayPeriod === option.value ? "#fff" : "#333",
-                border: "1px solid #ccc",
-                borderRadius: "4px",
-                cursor: "pointer",
-                fontWeight: displayPeriod === option.value ? "bold" : "normal"
-              }}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-
-          </div>
-          <div>
-            <div style={{ marginBottom: "4px" }}>Predict Days:</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-              {predictDaysOptions.map(option => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setPredictDays(option.value)}
-                  style={{
-                    padding: "8px",
-                    backgroundColor: predictDays === option.value ? "#007bff" : "#f0f0f0",
-                    color: predictDays === option.value ? "#fff" : "#333",
-                    border: "1px solid #ccc",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                    fontWeight: predictDays === option.value ? "bold" : "normal"
-                  }}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-        {suggestions.length > 0 && (
-          <ul
-            style={{
-              listStyle: "none",
-              padding: 0,
-              margin: 0,
-              border: "1px solid #ccc",
-              backgroundColor: "white",
-              position: "absolute",
-              top: "40px",
-              width: "100%",
-              maxWidth: "400px",
-              maxHeight: "200px",
-              overflowY: "auto",
-              zIndex: 1,
-              boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-            }}
-          >
-            {suggestions.map((stock) => (
-              <li
-                key={stock.ticker}
-                onClick={() => handleSelectSuggestion(stock.ticker)}
-                style={{
-                  padding: "10px",
-                  cursor: "pointer",
-                  borderBottom: "1px solid #eee",
-                }}
-              >
-                {stock.name} ({stock.ticker})
-              </li>
-            ))}
-          </ul>
-        )}
-        <button type="submit" style={{ width: "100%", maxWidth: "400px", padding: "8px" }}>Predict</button>
-      </form>
-      {loading && <p style={{ textAlign: "center" }}>Loading...</p>}
-      {error && <p style={{ color: "red", textAlign: "center" }}>{error}</p>}
-      {data && (
+      <Helmet>
+        <title>Stonks</title>
+        <meta property="og:title" content="Stock Price Predictor" />
+        <meta property="og:description" content="Predict the stock exchange!" />
+        <meta property="og:image" content={process.env.PUBLIC_URL + "/stonks.jpg"} />
+        <meta property="og:url" content={window.location.href} />
+        <meta property="og:type" content="website" />
+      </Helmet>
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-start", minHeight: "100vh" }}>
         <div
           style={{
-            maxWidth: "800px",
+            maxWidth: "50%",
             width: "100%",
-            margin: "20px auto",
-            border: "1px solid #ccc",
             padding: "20px",
-            borderRadius: "8px",
-            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
             backgroundColor: "white",
+            borderRadius: "16px",
+            boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
+            textAlign: "center",
+            marginTop: "40px"
           }}
         >
-          {data.historical && data.historical.prices.length === 0 && (
-            <p style={{ color: "orange", textAlign: "center" }}>No historical prices available. Check backend data.</p>
+          <h1 style={{ marginBottom: "20px" }}>Stock Price Predictor</h1>
+          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
+            <input
+              type="text"
+              value={ticker}
+              onChange={handleInputChange}
+              placeholder="Search ticker (e.g., NVDA)"
+              required
+              style={{ width: "100%", maxWidth: "600px", padding: "10px", marginBottom: "20px", fontSize: "16px" }}
+            />
+            {suggestions.length > 0 && (
+              <ul
+                style={{
+                  listStyle: "none",
+                  padding: 0,
+                  margin: 0,
+                  border: "1px solid #ccc",
+                  backgroundColor: "white",
+                  position: "absolute",
+                  top: "40px",
+                  width: "100%",
+                  maxWidth: "600px",
+                  maxHeight: "200px",
+                  overflowY: "auto",
+                  zIndex: 1,
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                }}
+              >
+                {suggestions.map((stock) => (
+                  <li
+                    key={stock.ticker}
+                    onClick={() => handleSelectSuggestion(stock.ticker)}
+                    style={{
+                      padding: "10px",
+                      cursor: "pointer",
+                      borderBottom: "1px solid #eee",
+                    }}
+                  >
+                    {stock.name} ({stock.ticker})
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div style={{ display: "flex", justifyContent: "center", gap: "20px", marginBottom: "20px" }}>
+              <div>
+                <label style={{ display: "block", marginBottom: "5px" }}>Predict Based on:</label>
+                <select 
+                  value={selectedModel} 
+                  onChange={(e) => setSelectedModel(parseInt(e.target.value))}
+                  style={{ padding: "8px", width: "200px" }}
+                >
+                  {modelOptions.map(option => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: "block", marginBottom: "5px" }}>Predict the next:</label>
+                <select 
+                  value={predictDays} 
+                  onChange={(e) => setPredictDays(parseInt(e.target.value))}
+                  style={{ padding: "8px", width: "200px" }}
+                >
+                  {predictDaysOptions.map(option => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <button type="submit" style={{ padding: "10px 20px", fontSize: "16px", backgroundColor: "#007bff", color: "white", border: "none", borderRadius: "20px", cursor: "pointer" }}>Predict</button>
+          </form>
+          {loading && <p style={{ marginTop: "20px" }}>Loading...</p>}
+          {error && <p style={{ color: "red", marginTop: "20px" }}>{error}</p>}
+          {data && (
+            <>
+              <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginTop: "20px", marginBottom: "10px" }}>
+                <label>Indicators:</label>
+                {indicatorOptions.map(option => (
+                  <label key={option.value} style={{ marginRight: "10px" }}>
+                    <input 
+                      type="checkbox" 
+                      checked={selectedIndicators.includes(option.value)}
+                      onChange={() => handleIndicatorChange(option.value)}
+                    />
+                    {option.label}
+                  </label>
+                ))}
+              </div>
+              <div style={{ display: "flex", justifyContent: "center", marginTop: "20px", marginBottom: "10px" }}>
+                {timeRangeOptions.map(option => (
+                  <button
+                    key={option.value}
+                    onClick={() => setDisplayPeriod(option.value)}
+                    style={{
+                      padding: "8px 12px",
+                      margin: "0 2px",
+                      backgroundColor: displayPeriod === option.value ? "#007bff" : "#f0f0f0",
+                      color: displayPeriod === option.value ? "#fff" : "#333",
+                      border: "1px solid #ccc",
+                      borderRadius: "4px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              <div 
+                style={{ 
+                  backgroundColor: "white", 
+                  borderRadius: "8px", 
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)", 
+                  padding: "10px", 
+                  marginTop: "20px",
+                  height: "500px" 
+                }}
+              >
+                <StockChart data={filterHistorical(data, displayPeriod)} selectedIndicators={selectedIndicators} />
+              </div>
+            </>
           )}
-          <div style={{ height: "400px" }}> {/* Fixed height for better control on mobile */}
-            <StockChart historical={filterHistorical(data, displayPeriod).historical} predicted={data.predicted} />
-          </div>
         </div>
-      )}
-    </div>
+      </div>
     </>
   );
 }

@@ -3,13 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
 import pandas as pd
+import numpy as np
 from utils import fetch_historical_data, prepare_data_for_prediction, make_prediction
 from datetime import datetime
-import dateutil.relativedelta  # Add this for relative date offsets
+import dateutil.relativedelta
 
 app = FastAPI()
 
-# CORS configuration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -18,12 +18,51 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 class PredictionRequest(BaseModel):
     ticker: str
     period: str = "1y"
     time_steps: int = 60
     predict_days: int = 30
+
+def calculate_rsi(series, period=14):
+    delta = series.diff(1)
+    gain = delta.where(delta > 0, 0)
+    loss = -delta.where(delta < 0, 0)
+    avg_gain = gain.rolling(window=period, min_periods=1).mean()
+    avg_loss = loss.rolling(window=period, min_periods=1).mean()
+    rs = avg_gain / avg_loss
+    rsi = 100 - (100 / (1 + rs))
+    return rsi
+
+def calculate_macd(series, fast=12, slow=26, signal=9):
+    ema_fast = series.ewm(span=fast, adjust=False).mean()
+    ema_slow = series.ewm(span=slow, adjust=False).mean()
+    macd_line = ema_fast - ema_slow
+    signal_line = macd_line.ewm(span=signal, adjust=False).mean()
+    histogram = macd_line - signal_line
+    return {
+        'macd': macd_line,
+        'signal': signal_line,
+        'histogram': histogram
+    }
+
+def calculate_sma(series, period=50):
+    return series.rolling(window=period).mean()
+
+def calculate_ema(series, period=200):
+    return series.ewm(span=period, adjust=False).mean()
+
+def replace_nan_with_none(lst):
+    return [None if pd.isna(x) else x for x in lst]
+
+def replace_nan_in_indicators(indicators_data):
+    for key, value in indicators_data.items():
+        if isinstance(value, dict):
+            for subkey, subvalue in value.items():
+                value[subkey] = replace_nan_with_none(subvalue)
+        else:
+            indicators_data[key] = replace_nan_with_none(value)
+    return indicators_data
 
 @app.get("/")
 def read_root():
@@ -33,16 +72,14 @@ def read_root():
 def predict(request: PredictionRequest):
     
     ticker = request.ticker.upper()
-    time_steps = 120   
+    time_steps = request.time_steps
     predict_days = request.predict_days
 
-    # Fetch full historical data
     full_historical = fetch_historical_data(ticker, period="max")
 
     if full_historical is None:
         return {"error": f"Could not fetch data for {ticker}"}
     
-    # Determine start date based on period
     last_date = full_historical.index[-1]
     if request.period in ["all", "max"]:
         historical_data = full_historical
@@ -54,41 +91,64 @@ def predict(request: PredictionRequest):
             "1d": {"days": 1},
             "5d": {"days": 5},
             "1m": {"months": 1},
+            "3m": {"months": 3},
             "6m": {"months": 6},
             "1y": {"years": 1},
             "5y": {"years": 5},
         }
-        offset = offset_map.get(request.period, {"years": 1})  # Default 1y
+        offset = offset_map.get(request.period, {"years": 1})
         start_date = last_date - dateutil.relativedelta.relativedelta(**offset)
         historical_data = full_historical[full_historical.index >= start_date]
     
-    # Prepare input for model using full data (last time_steps days)
-    input_data, scaler = prepare_data_for_prediction(full_historical, time_steps)
-    
-    # Make prediction
-    try:
-        input_data, scaler = prepare_data_for_prediction(full_historical, time_steps)
-        predictions = make_prediction(input_data, scaler, predict_days, time_steps)
-    except Exception as e:
-        print(f"Prediction error: {e}")  # Log for debugging
-        predictions = []  # Empty predictions on failure
-    
-    # Format response
+    # Format historical
     historical = {
         "dates": historical_data.index.strftime("%Y-%m-%d").tolist(),
         "prices": historical_data['Close'].values.tolist()
     }
+
+    error_msg = None
+    predictions = []
+    try:
+        input_data, scaler = prepare_data_for_prediction(full_historical, time_steps)
+        preds_array = make_prediction(input_data, scaler, predict_days, time_steps)
+        predictions = preds_array.tolist()
+    except Exception as e:
+        print(f"Prediction error: {e}")
+        error_msg = str(e)
+
     # Predicted dates using business days
     predicted_dates = pd.bdate_range(start=last_date + pd.Timedelta(days=1), periods=len(predictions)).strftime("%Y-%m-%d").tolist() if len(predictions) > 0 else []
     predicted = {
         "dates": predicted_dates,
-        "prices": predictions.tolist()
+        "prices": predictions
     }
-    
-    return {
+
+    # Always compute all indicators
+    indicators_data = {}
+    df = historical_data.copy()
+    close = df['Close']
+    indicators_data['rsi'] = calculate_rsi(close).tolist()
+    macd = calculate_macd(close)
+    indicators_data['macd'] = {
+        'macd': macd['macd'].tolist(),
+        'signal': macd['signal'].tolist(),
+        'histogram': macd['histogram'].tolist()
+    }
+    indicators_data['sma50'] = calculate_sma(close, 50).tolist()
+    indicators_data['ema200'] = calculate_ema(close, 200).tolist()
+
+    # Replace NaN with None for JSON compatibility
+    indicators_data = replace_nan_in_indicators(indicators_data)
+
+    response = {
         "historical": historical,
-        "predicted": predicted
+        "predicted": predicted,
+        "indicators": indicators_data
     }
+    if error_msg:
+        response["error"] = error_msg
+    
+    return response
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
