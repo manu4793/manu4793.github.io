@@ -357,6 +357,7 @@ export default function ChessDemo() {
     updateStatus();
   };
 
+  // UPDATED makePlayerMove: truncates history if not at end before adding move
   const makePlayerMove = (from, to, promotion) => {
     const move = { from, to, promotion };
     let result;
@@ -368,9 +369,13 @@ export default function ChessDemo() {
     }
     if (result) {
       playSound(result);
-      setFen(chess.fen());
-      setHistory((prev) => [...prev.slice(0, currentMoveRef.current + 1), chess.fen()]);
+      // TRUNCATE history if not at the end before adding new move
+      setHistory((prev) => [
+        ...prev.slice(0, currentMoveRef.current + 1),
+        chess.fen()
+      ]);
       setCurrentMove((prev) => prev + 1);
+      setFen(chess.fen());
       afterFenChange();
       if (gameMode === 'vsComputer' && !chess.isGameOver() && engineReady) {
         makeAIMove();
@@ -397,7 +402,7 @@ export default function ChessDemo() {
 
   const onSquareClick = (square) => {
     const piece = chess.get(square);
-    if (piece && piece.color === chess.turn() && currentMove === history.length - 1) {
+    if (piece && piece.color === chess.turn()) {
       if (square === selectedSquare) {
         setSelectedSquare(null);
       } else {
@@ -500,7 +505,7 @@ export default function ChessDemo() {
   };
 
   const isDraggablePiece = ({ piece }) =>
-    currentMove === history.length - 1 && (gameMode === 'vsPlayer' || piece[0] === playerSide);
+    gameMode === 'vsPlayer' || piece[0] === playerSide;
 
   const evalPawns = evalScore / 100;
   const advantage = Math.tanh(evalPawns / 3) * 50;
@@ -565,8 +570,7 @@ export default function ChessDemo() {
         <title>Chess Demo</title>
         <meta property="og:title" content="Chess Demo" />
         <meta property="og:description" content="Play chess against Stockfish." />
-        <meta property="og:image" content="https://cdn-icons-png.flaticon.com/512/600/600489.png" /> {/* Chess board icon */}
-        {/* Or use your hosted asset: content={`${base}/assets/images/b_king.png`} */}
+        <meta property="og:image" content="https://cdn-icons-png.flaticon.com/512/600/600489.png" />
         <meta property="og:url" content={window.location.href} />
         <meta property="og:type" content="website" />
       </Helmet>

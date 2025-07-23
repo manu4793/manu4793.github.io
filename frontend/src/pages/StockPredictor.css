@@ -66,12 +66,20 @@ body {
   padding-bottom: 6px;
 }
 .time-range-row button {
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
   min-width: 72px;
   flex: 0 0 auto;
   white-space: nowrap;
   font-size: 1rem;
   padding: 8px 10px;
 }
+.time-range-row button:focus {
+  outline: none;
+}
+
 
 /* Optionally style/hide scroll bar */
 .time-range-row::-webkit-scrollbar {
