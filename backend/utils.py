@@ -20,14 +20,13 @@ def get_model(time_steps):
                 print(f"Error loading model directly: {e}. Attempting to recreate and load weights.")
                 # Recreate the model architecture
                 model = Sequential()
-                model.add(LSTM(units=50, return_sequences=True, input_shape=(time_steps, 5)))
+                model.add(LSTM(units=50, return_sequences=True, input_shape=(time_steps, 1)))
                 model.add(Dropout(0.2))
                 model.add(LSTM(units=50, return_sequences=True))
                 model.add(Dropout(0.2))
                 model.add(LSTM(units=50))
                 model.add(Dropout(0.2))
                 model.add(Dense(units=1))
-
                 # Load weights
                 model.load_weights(model_path)
                 models[time_steps] = model
@@ -47,23 +46,11 @@ def fetch_historical_data(ticker, period="max"):
         return None
 
 def prepare_data_for_prediction(historical_data, time_steps):
-    # Build a dataframe with desired features (make sure to compute them for all rows first)
-    features = [
-        historical_data['Close'],
-        calculate_rsi(historical_data['Close']),
-        calculate_macd(historical_data['Close'])['macd'],
-        calculate_sma(historical_data['Close'], 50),
-        calculate_ema(historical_data['Close'], 200),
-    ]
-    df = pd.concat(features, axis=1)
-    df.columns = ['Close', 'RSI', 'MACD', 'SMA50', 'EMA200']
-    df = df.dropna()  # Drop rows with NaN (initial periods)
-
     scaler = MinMaxScaler(feature_range=(0, 1))
-    scaled_data = scaler.fit_transform(df.values)
+    scaled_data = scaler.fit_transform(historical_data['Close'].values.reshape(-1, 1))
     if len(scaled_data) < time_steps:
         raise ValueError("Not enough data for prediction")
-    input_data = scaled_data[-time_steps:].reshape(1, time_steps, 5)
+    input_data = scaled_data[-time_steps:].reshape(1, time_steps, 1)
     return input_data, scaler
 
 def make_prediction(input_data, scaler, predict_days, time_steps):
